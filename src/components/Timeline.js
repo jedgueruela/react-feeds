@@ -13,7 +13,7 @@ class Timeline extends Component {
 
     this.state = { ...INITIAL_STATE };
     this.API = this.props.API;
-    this.ref = this.API.Timeline.byUserID(0);
+    this.ref = this.API.Timeline.byUserID("uid0");
   }
 
   componentDidMount() {

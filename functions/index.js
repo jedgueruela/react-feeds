@@ -3,42 +3,50 @@ const admin = require('firebase-admin');
 
 admin.initializeApp(functions.config().firebase);
 
-const fanOutPost = async (data, postKey, userKey) => {
-  // First path updates an entry on user's timeline
-  const fanOutObj = {
-    [`timelines/${userKey}/${postKey}`]: data
-  };
-
-  // Get user's connections
-  const promise = await admin.database().ref(`connections/${userKey}`).once('value');
-  const connections = promise.val();
-
-  // Update an entry for each connections' timeline
-  if(connections) {
-    Object.keys(connections).forEach(connectionKey => {
-      fanOutObj[`timelines/${connectionKey}/${postKey}`] = data;
-    });
-  }
-
-  return admin.database().ref().update(fanOutObj);
+const fanOutPost = async (post, lookup, postKey, userKey) => {
+  
 }
 
 exports.postCreated = functions.database.ref('/posts/{postKey}')
-  .onCreate((snapshot, context) => {
+  .onCreate(async (snapshot, context) => {
     const post = snapshot.val();
+    const postKey = context.params.postKey;
+    const postUserID = post.userID;
+    const fanOutObj = {
+      [`timelines/${postUserID}/${postKey}`]: post,
+      [`post_timelines/${postKey}/${postUserID}`]: true
+    };
 
-    return fanOutPost(
-      post,
-      context.params.postKey,
-      post.userID
-    );
+    // Get all user's connections
+    const promise = await admin.database().ref(`connections/${postUserID}`).once('value');
+    const connections = promise.val();
+
+    if(connections) {
+      Object.keys(connections).forEach(connectionKey => {
+        fanOutObj[`timelines/${connectionKey}/${postKey}`] = post;
+        fanOutObj[`post_timelines/${postKey}/${connectionKey}`] = true;
+      });
+    }
+
+    return admin.database().ref().update(fanOutObj);
   });
 
 exports.postDeleted = functions.database.ref('/posts/{postKey}')
-  .onDelete((snapshot, context) => {
-    return fanOutPost(
-      null,
-      context.params.postKey,
-      snapshot.val().userID
-    );
+  .onDelete(async (snapshot, context) => {
+    const postKey = context.params.postKey;
+    const fanOutObj = {
+      [`post_timelines/${postKey}`]: null
+    };
+
+    // Get all timelines which has the post
+    const promise = await admin.database().ref(`post_timelines/${postKey}`).once('value');
+    const timelines = promise.val();
+
+    if(timelines) {
+      Object.keys(timelines).forEach(key => {
+        fanOutObj[`timelines/${key}/${postKey}`] = null;
+      });
+    }
+
+    return admin.database().ref().update(fanOutObj);
   });

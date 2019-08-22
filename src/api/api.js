@@ -10,7 +10,7 @@ class Post {
   async create(post) {
     const postid = this.dbRef.push().key;
     const attachments = post.attachments;
-    const userID = 0;
+    const userID = "uid0";
     const data = {
       body: post.body,
       attachments: [],
