@@ -28,7 +28,7 @@ class PostForm extends Component {
       isFormLoading: true
     });
 
-    this.props.API.Post.create(this.state.post).then(response => {
+    this.props.API.Posts.create(this.state.post).then(response => {
       console.log('winner winner chicken dinner');
     }).catch(error => {
       console.error(error);

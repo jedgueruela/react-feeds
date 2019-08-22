@@ -11,14 +11,14 @@ exports.postCreated = functions.database.ref('/posts/{postKey}')
   .onCreate(async (snapshot, context) => {
     const post = snapshot.val();
     const postKey = context.params.postKey;
-    const postUserID = post.userID;
+    const postUserKey = post.userID;
     const fanOutObj = {
-      [`timelines/${postUserID}/${postKey}`]: post,
-      [`post_timelines/${postKey}/${postUserID}`]: true
+      [`timelines/${postUserKey}/${postKey}`]: post,
+      [`post_timelines/${postKey}/${postUserKey}`]: true
     };
 
     // Get all user's connections
-    const promise = await admin.database().ref(`connections/${postUserID}`).once('value');
+    const promise = await admin.database().ref(`connections/${postUserKey}`).once('value');
     const connections = promise.val();
 
     if(connections) {
@@ -45,6 +45,51 @@ exports.postDeleted = functions.database.ref('/posts/{postKey}')
     if(timelines) {
       Object.keys(timelines).forEach(key => {
         fanOutObj[`timelines/${key}/${postKey}`] = null;
+      });
+    }
+
+    return admin.database().ref().update(fanOutObj);
+  });
+
+exports.connectionsDeleted = functions.database.ref('/connections/{userKey}/{connectionKey}')
+  .onDelete(async (snapshot, context) => {
+    const userKey = context.params.userKey;
+    const connectionKey = context.params.connectionKey;
+    const fanOutObj = {
+      [`connections/${connectionKey}/${userKey}`]: null
+    };
+
+    // Get all connection's posts from the user's timeline
+    const cp = await admin.database().ref(`timelines/${userKey}`)
+      .ref
+      .orderByChild('userID')
+      .equalTo(connectionKey)
+      .once('value');
+
+    const connectionPosts = cp.val();
+
+    // Create paths for removing connection's posts from the user's timeline
+    if(connectionPosts) {
+      Object.keys(connectionPosts).forEach(post => {
+        fanOutObj[`timelines/${userKey}/${post}`] = null;
+        fanOutObj[`post_timelines/${post}/${userKey}`] = null;
+      });
+    }
+
+    // Get all user's posts from the connection's timeline
+    const up = await admin.database().ref(`timelines/${connectionKey}`)
+      .ref
+      .orderByChild('userID')
+      .equalTo(userKey)
+      .once('value');
+
+    const userPosts = up.val();
+
+    // Create paths for removing user's posts from the connection's timeline
+    if(userPosts) {
+      Object.keys(userPosts).forEach(post => {
+        fanOutObj[`timelines/${connectionKey}/${post}`] = null;
+        fanOutObj[`post_timelines/${post}/${connectionKey}`] = null;
       });
     }
 

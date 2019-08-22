@@ -4,26 +4,26 @@ import React, {
 import { withAPI } from '../api';
 
 const INITIAL_STATE = {
-  posts: []
+  connections: []
 }
 
-class Timeline extends Component {
+class Connections extends Component {
   constructor(props) {
     super(props);
 
     this.state = { ...INITIAL_STATE };
     this.API = this.props.API;
-    this.ref = this.API.Timelines.byUserID("uid0");
+    this.ref = this.API.Connections.byUserID("uid0");
   }
 
   componentDidMount() {
     this.ref.on('value', snapshot => {
       const data = snapshot.val();
-      const posts = [];
+      const connections = [];
 
       if (data) {
         Object.keys(data).forEach(key => {
-          posts.push({
+          connections.push({
             ...data[key],
             key
           });
@@ -31,7 +31,7 @@ class Timeline extends Component {
       }
 
       this.setState({
-        posts
+        connections
       });
     });
   }
@@ -40,8 +40,8 @@ class Timeline extends Component {
     this.ref.off();
   }
 
-  removePost = key => {
-    this.API.Posts.remove(key).then(() => {
+  removeConnection = (userKey, connectionKey) => {
+    this.API.Connections.remove(userKey, connectionKey).then(() => {
       console.log('great! deleted!');
     }).catch(error => {
       console.error(error);
@@ -49,15 +49,17 @@ class Timeline extends Component {
   }
 
   render() {
-    const { posts } = this.state;
+    const { connections } = this.state;
 
     return (
-      <div className="posts">
-        { posts && posts.map(post => {
+      <div className="connections">
+        { connections && connections.map(connection => {
           return (
-            <p key={ post.key }>
-              { post.body }
-              <button onClick={ () => this.removePost(post.key) }>Delete</button>
+            <p key={ connection.key }>
+              { connection.key }
+              <button onClick={ () => this.removeConnection("uid0", connection.key) }>
+                Delete
+              </button>
             </p>
           )
         }) }
@@ -69,4 +71,4 @@ class Timeline extends Component {
 
 // get the timeline of the current user
 
-export default withAPI(Timeline);
+export default withAPI(Connections);

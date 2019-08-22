@@ -10,7 +10,7 @@ class Post {
   async create(post) {
     const postid = this.dbRef.push().key;
     const attachments = post.attachments;
-    const userID = "uid0";
+    const userID = "uid2";
     const data = {
       body: post.body,
       attachments: [],
@@ -49,10 +49,26 @@ class Timeline {
   }
 }
 
+class Connections {
+  constructor(firebase) {
+    this.db = firebase.db;
+    this.dbRef = this.db.ref('connections');
+  }
+
+  byUserID(userID) {
+    return this.dbRef.child(userID);
+  }
+
+  remove(userKey, connectionKey) {
+    return this.dbRef.child(`${userKey}/${connectionKey}`).remove();
+  }
+}
+
 const firebase = new Firebase();
 const API = {
-  Post: new Post(firebase),
-  Timeline: new Timeline(firebase)
+  Connections: new Connections(firebase),
+  Posts: new Post(firebase),
+  Timelines: new Timeline(firebase)
 };
 
 export default API;
